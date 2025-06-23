@@ -3,7 +3,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 import time
 
 
-def load_model(model_name_or_path="Qwen/Qwen3-0.6b-0.6B"):
+def load_model(model_name_or_path="Qwen/qwen3-0.6b-0.6B"):
     """
     Load the Qwen model and tokenizer
 
@@ -119,8 +119,8 @@ def call_qwen(model_name_or_path):
     del model, tokenizer
 
 def main():
-    call_qwen("model/Qwen3-0.6b")
-    call_qwen("model/Qwen3-0.6b-base")
+    call_qwen("model/qwen3-0.6b")
+    call_qwen("model/qwen3-0.6b-base")
 
 if __name__ == "__main__":
     main()

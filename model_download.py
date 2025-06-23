@@ -2,7 +2,7 @@ import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 
-def download_qwen_model(model_name_or_path="Qwen/Qwen3-0.6b-0.6B", save_directory="./model"):
+def download_qwen_model(model_name_or_path="Qwen/qwen3-0.6b-0.6B", save_directory="./model"):
     """
     Download Qwen model and tokenizer to a specified directory.
 
