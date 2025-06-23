@@ -3,7 +3,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 import time
 
 
-def load_model(model_name_or_path="Qwen/Qwen2-7B-Instruct"):
+def load_model(model_name_or_path="Qwen/Qwen3-0.6b-0.6B"):
     """
     Load the Qwen model and tokenizer
 
@@ -14,12 +14,11 @@ def load_model(model_name_or_path="Qwen/Qwen2-7B-Instruct"):
         model, tokenizer
     """
     print(f"Loading model: {model_name_or_path}")
-    tokenizer = AutoTokenizer.from_pretrained(model_name_or_path, trust_remote_code=True)
+    tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
     model = AutoModelForCausalLM.from_pretrained(
         model_name_or_path,
         device_map="auto",
-        torch_dtype=torch.float16,
-        trust_remote_code=True
+        torch_dtype=torch.float16
     )
     return model, tokenizer
 
@@ -108,6 +107,20 @@ def generate_response(model, tokenizer, prompt, max_length=2048):
 
     print(f"Generation time: {elapsed_time:.2f} seconds")
     return response
+
+def call_qwen(model_name_or_path):
+    print(f"Calling Qwen model: {model_name_or_path}")
+    model, tokenizer = load_model(model_name_or_path)
+    # Example prompt
+    prompt = "法国的首都在哪里？"
+    # Generate response
+    response = generate_response(model, tokenizer, prompt)
+    print(f"Response: {response}")
+    del model, tokenizer
+
+def main():
+    call_qwen("model/Qwen3-0.6b")
+    call_qwen("model/Qwen3-0.6b-base")
 
 if __name__ == "__main__":
     main()
