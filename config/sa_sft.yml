@@ -2,13 +2,19 @@
 #  Parameters - SA-SFT
 #################################################################
 
-hf_token: "your Huggingface access token"
-#llama_version: 3
-tokenizer_path: "meta-llama/Meta-Llama-3-8B-Instruct"
-model_path:  "meta-llama/Meta-Llama-3-8B-Instruct"
-ag_adapter_name: "ag_adapter"
+tokenizer_path: "model/qwen3-0.6b-base"
+model_name_or_path:  "model/qwen3-0.6b-base"
+comp_id: "answer"
+instruction: >
+  You are given a question and references which may or may not help answer the question.
+  Please answer the question in as few words as possible by using the information provided in the references that is relevant in answering the question.
+
+chat_prompt_template: >
+  question: {question}\n
+  context: {context}\n
 
 model_save_path: "models/SA/SA_sft"
+log_path: "logs/SA/SA_sft.log"
 model_warmup_ratio: 0.01
 model_max_length: 512
 model_max_target_length: 75
