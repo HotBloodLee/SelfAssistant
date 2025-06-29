@@ -4,11 +4,13 @@ from pprint import pprint
 
 import torch
 from datasets import Dataset
-from transformers import TrainingArguments, Trainer, AutoTokenizer, AutoModelForCausalLM
+from transformers import TrainingArguments, Trainer, AutoTokenizer, AutoModelForCausalLM, DataCollatorForSeq2Seq
 
-IGNORE_INDEX = 151643
+from core.utils.common_utils import LossRecorderCallback, plot_training_loss
 
-def load_model(model_name_or_path="Qwen/qwen3-0.6b-0.6B"):
+IGNORE_INDEX = -100
+
+def load_model(model_name_or_path="Qwen/qwen3-0.6b"):
     """
     Load the Qwen model and tokenizer
 
@@ -19,20 +21,18 @@ def load_model(model_name_or_path="Qwen/qwen3-0.6b-0.6B"):
         model, tokenizer
     """
     print(f"Loading model: {model_name_or_path}")
-    tokenizer_ = AutoTokenizer.from_pretrained(model_name_or_path)
-    print(tokenizer_.pad_token_id)
-    print(tokenizer_.vocab_size)
+    tokenizer_ = AutoTokenizer.from_pretrained(model_name_or_path,use_cache=False)
     model_ = AutoModelForCausalLM.from_pretrained(
         model_name_or_path,
         device_map="auto",
-        torch_dtype=torch.float16
+        torch_dtype=torch.float16,
+        use_cache=False
     )
     return model_, tokenizer_
 
 def return_prompt_and_responses(samples):
     input_encodings = tokenizer(samples["full_prompt"])
     model_prompts = tokenizer(samples["prompt"])
-
 
     label = copy.deepcopy(input_encodings["input_ids"])
     prompt_length = len(model_prompts["input_ids"])
@@ -176,8 +176,8 @@ else:
 training_args = TrainingArguments(
     output_dir="./out",
     warmup_ratio=0.01,
-    learning_rate=0.000001,
-    num_train_epochs=2,
+    learning_rate=0.00001,
+    num_train_epochs=20,
     per_device_train_batch_size=1,
     per_device_eval_batch_size=1,
     remove_unused_columns=False,  # prevents from indexing errors
@@ -186,22 +186,31 @@ training_args = TrainingArguments(
     save_only_model=True,  # do not store optimizer state etc. to save space
     save_total_limit=1,  # only store best model
     report_to="none",  # avoid issues with distributed setup
-    # bf16=torch.cuda.is_bf16_supported(),  # mixed-precision training
-    bf16=False,
-    # do_eval=evalDuringTraining,
+    bf16=torch.cuda.is_bf16_supported(),  # mixed-precision training
+    do_eval=evalDuringTraining== "epoch",
     gradient_accumulation_steps=1,
     gradient_checkpointing=True,
 
 )
+
+# optimizer
+
+loss_recorder = LossRecorderCallback()
+
+optimizer = torch.optim.AdamW(model.parameters(), lr=training_args.learning_rate, eps=1e-4)
 
 # trainer
 trainer = Trainer(
     model=model,
     args=training_args,
     train_dataset=train_dataset,
-    eval_dataset=train_dataset,
+    eval_dataset=dev_dataset,
+    callbacks=[loss_recorder],
+    data_collator=DataCollatorForSeq2Seq(tokenizer, return_tensors="pt"),
+    optimizers=(optimizer, None),  # No scheduler
 )
 
 print("Starting training now...")
 trainer.train()
+plot_training_loss(loss_recorder, save_path="./sft_loss.png")
 print("Done with training!")

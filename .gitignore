@@ -1,5 +1,9 @@
-.idea
+.idea/**
 .DS_Store
 ./model
 model/**
 out/**
+logs/**
+core/__pycache__/**
+core/utils/__pycache__/**
+core/model/__pycache__/**

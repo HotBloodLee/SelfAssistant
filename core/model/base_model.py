@@ -175,12 +175,12 @@ class SABaseModel():
             per_device_eval_batch_size=self.config["model_eval_batch_size"],
             remove_unused_columns=False,  # prevents from indexing errors
             save_strategy="epoch",  # epoch-wise eval
-            evaluation_strategy=evalDuringTraining,  # epoch-wise eval
+            eval_strategy=evalDuringTraining,  # epoch-wise eval
             save_only_model=True,  # do not store optimizer state etc. to save space
             save_total_limit=1,  # only store best model
             report_to="none",  # avoid issues with distributed setup
             bf16=torch.cuda.is_bf16_supported(),  # mixed-precision training
-            # do_eval=evalDuringTraining,
+            do_eval=evalDuringTraining== "epoch",
             gradient_accumulation_steps=1,
             gradient_checkpointing=True,
 
@@ -224,7 +224,7 @@ class SABaseModel():
             num_train_epochs=self.config["model_num_epochs"],
             gradient_accumulation_steps=1,
             gradient_checkpointing=True,
-            evaluation_strategy=evalDuringTraining,
+            eval_strategy=evalDuringTraining,
             save_strategy="epoch",
             save_only_model=True,
             bf16=torch.cuda.is_bf16_supported(),

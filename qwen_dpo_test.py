@@ -7,7 +7,9 @@ from datasets import Dataset
 from transformers import TrainingArguments, Trainer, AutoTokenizer, AutoModelForCausalLM
 from trl import  DPOTrainer, DPOConfig
 
-IGNORE_INDEX = 151643
+from core.utils.common_utils import LossRecorderCallback, plot_training_loss
+
+IGNORE_INDEX = -100
 
 def load_model(model_name_or_path="Qwen/qwen3-0.6b-0.6B"):
     """
@@ -20,13 +22,12 @@ def load_model(model_name_or_path="Qwen/qwen3-0.6b-0.6B"):
         model, tokenizer
     """
     print(f"Loading model: {model_name_or_path}")
-    tokenizer_ = AutoTokenizer.from_pretrained(model_name_or_path)
-    print(tokenizer_.pad_token_id)
-    print(tokenizer_.vocab_size)
+    tokenizer_ = AutoTokenizer.from_pretrained(model_name_or_path, use_cache=False)
     model_ = AutoModelForCausalLM.from_pretrained(
         model_name_or_path,
         device_map="auto",
-        torch_dtype=torch.float16
+        torch_dtype=torch.float16,
+        use_cache=False
     )
     return model_, tokenizer_
 
@@ -182,27 +183,34 @@ training_args = DPOConfig(
     warmup_steps=150,#150,
     per_device_train_batch_size=1, #2
     per_device_eval_batch_size=1,
-    num_train_epochs=1,
+    num_train_epochs=20,
     gradient_accumulation_steps=1,
     gradient_checkpointing=True,
     eval_strategy=evalDuringTraining,
     save_strategy="epoch",
     save_only_model=True,
+    save_total_limit=1,
     bf16=torch.cuda.is_bf16_supported(),
     beta=0.1
 )
 
+loss_recorder = LossRecorderCallback()
+
+optimizer = torch.optim.AdamW(model.parameters(), lr=training_args.learning_rate, eps=1e-4)
+
 # trainer
 dpo_trainer = DPOTrainer(
-            model,                  # base model from SFT pipeline
-            ref_model=None,              # typically a copy of the SFT trained base model
-           # beta=0.1,#0.5,              # temperature hyperparameter of DPO
-            train_dataset=train_dataset, # dataset prepared above
-            eval_dataset=dev_dataset,           # eval dataset prepared above
-            # tokenizer=tokenizer,    # tokenizer
-            args=training_args,          # training arguments e.g. batch size, lr, etc.
-        )
+    model,                  # base model from SFT pipeline
+    ref_model=None,              # typically a copy of the SFT trained base model
+    train_dataset=train_dataset, # dataset prepared above
+    eval_dataset=dev_dataset,           # eval dataset prepared above
+    tokenizer=tokenizer,    # tokenizer
+    args=training_args,          # training arguments e.g. batch size, lr, etc.
+    optimizers=(optimizer, None),  # No scheduler
+    callbacks=[loss_recorder],
+)
 
 print("Starting training now...")
 dpo_trainer.train()
+plot_training_loss(loss_recorder, save_path="./dpo_loss_plot.png")
 print("Done with training!")

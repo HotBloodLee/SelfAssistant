@@ -58,7 +58,7 @@ data = [
 
 config = load_config('config/sa_sft.yml')
 
-model = QwenModel(config=None)
+model = QwenModel(config=config)
 
 data_list = model.prepare_sft_data(data)
 random.shuffle(data_list)

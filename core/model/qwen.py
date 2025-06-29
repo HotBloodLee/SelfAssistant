@@ -8,11 +8,12 @@ from core.model.base_model import SABaseModel
 
 class QwenModel(SABaseModel):
     def __init__(self, config):
+        super(QwenModel, self).__init__(config)
         self.p_at_1 = 0
         self.hit_at_5 = 0
         self.mrr = 0
-        self.model, self.tokenizer = self.load_model(config['model_name_or_path'])
-        super(QwenModel, self).__init__(config)
+        self.model, self.tokenizer = self.load_model(self.config['model_name_or_path'])
+
 
     def load_model(self, model_name_or_path="Qwen/qwen3-0.6b-base"):
         """
@@ -25,12 +26,13 @@ class QwenModel(SABaseModel):
                 model, tokenizer
             """
         self.logger.info(f"Loading model: {model_name_or_path}")
-        tokenizer_ = AutoTokenizer.from_pretrained(model_name_or_path)
+        tokenizer_ = AutoTokenizer.from_pretrained(model_name_or_path,use_cache=False)
 
         model_ = AutoModelForCausalLM.from_pretrained(
             model_name_or_path,
             device_map="auto",
-            torch_dtype=torch.float16
+            torch_dtype=torch.float16,
+            use_cache=False
         )
         return model_, tokenizer_
 
