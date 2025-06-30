@@ -86,8 +86,3 @@ class QwenModel(SABaseModel):
             data_list.append(sample)
 
         return data_list
-
-
-if __name__ == "__main__":
-    if len(sys.argv) > 1:
-        config_path = sys.argv[1]

@@ -1,11 +1,55 @@
+import json
 import math
+from pathlib import Path
 from pprint import pprint
+import configparser
 
+import pdfplumber
 import yaml
 import matplotlib.pyplot as plt
+from docx import Document
+from pptx import Presentation
 from transformers.trainer_callback import TrainerCallback
 
 IGNORE_INDEX = -100
+
+def read_pdf(file_path):
+    with pdfplumber.open(file_path) as pdf:
+        pages = [page.extract_text() for page in pdf.pages if page.extract_text()]
+    return "\n\n".join(pages)
+
+def read_docx(file_path):
+    doc = Document(file_path)
+    paras = [p.text for p in doc.paragraphs if p.text.strip()]
+    return "\n\n".join(paras)
+
+def read_pptx(file_path):
+    prs = Presentation(file_path)
+    slides = []
+    for idx, slide in enumerate(prs.slides):
+        parts = []
+        for shape in slide.shapes:
+            if hasattr(shape, "text"):
+                parts.append(shape.text.strip())
+        slides.append(f"Slide {idx+1}:\n" + "\n".join(parts))
+    return "\n\n".join(slides)
+
+def read_md(file_path):
+    with open(file_path, 'r', encoding='utf-8') as f:
+        return f.read()
+
+def read_file(file_path):
+    suffix = Path(file_path).suffix.lower()
+    if suffix == ".pdf":
+        return read_pdf(file_path), "PDF"
+    elif suffix == ".docx":
+        return read_docx(file_path), "Word"
+    elif suffix == ".pptx" or suffix == ".ppt":
+        return read_pptx(file_path), "PPT"
+    elif suffix == ".md":
+        return read_md(file_path), "Markdown"
+    else:
+        return None, None
 
 def load_config(config_path):
     """Load config from yaml path."""
@@ -13,6 +57,15 @@ def load_config(config_path):
         config = yaml.safe_load(fp)
     return config
 
+def load_json(file_path):
+    with open(file_path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+def load_secret(secret_path):
+    """Load secret from ini path."""
+    config = configparser.ConfigParser()
+    config.read(secret_path)
+    return config
 
 class LossRecorderCallback(TrainerCallback):
     def __init__(self):

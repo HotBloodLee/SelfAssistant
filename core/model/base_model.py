@@ -6,10 +6,10 @@ import random
 
 import torch
 from datasets import Dataset
-from transformers import pipeline, Trainer, TrainingArguments
+from transformers import pipeline, Trainer, TrainingArguments, DataCollatorForSeq2Seq
 from trl import DPOTrainer, DPOConfig
 
-from core.utils.common_utils import IGNORE_INDEX
+from core.utils.common_utils import IGNORE_INDEX, LossRecorderCallback, plot_training_loss
 
 
 class SABaseModel():
@@ -186,16 +186,25 @@ class SABaseModel():
 
         )
 
+        loss_recorder = LossRecorderCallback()
+
+        # optimizer
+        optimizer = torch.optim.AdamW(self.model.parameters(), lr=training_args.learning_rate, eps=1e-4)
+
         # trainer
         trainer = Trainer(
             model=self.model,
             args=training_args,
             train_dataset=train_dataset,
             eval_dataset=dev_dataset,
+            data_collator=DataCollatorForSeq2Seq(self.tokenizer, return_tensors="pt"),
+            optimizers=(optimizer, None),  # No scheduler
+            callbacks=[loss_recorder]
         )
 
         self.logger.info("Starting training now...")
         trainer.train()
+        plot_training_loss(loss_recorder, save_path="./sft_loss.png")
         self.logger.info("Done with training!")
 
     def train_dpo(self, train_list, dev_list=None):
@@ -231,17 +240,23 @@ class SABaseModel():
             beta=0.1
         )
 
+        loss_recorder = LossRecorderCallback()
+
+        optimizer = torch.optim.AdamW(self.model.parameters(), lr=training_args.learning_rate, eps=1e-4)
+
         dpo_trainer = DPOTrainer(
             self.model,  # base model from SFT pipeline
             ref_model=None,  # typically a copy of the SFT trained base model
-            # beta=0.1,#0.5,              # temperature hyperparameter of DPO
             train_dataset=train_dataset,  # dataset prepared above
             eval_dataset=None,  # eval dataset prepared above
             tokenizer=self.tokenizer,  # tokenizer
             args=training_args,  # training arguments e.g. batch size, lr, etc.
+            optimizers=(optimizer, None),  # No scheduler
+            callbacks=[loss_recorder],
         )
 
         self.logger.info("Starting training now...")
         dpo_trainer.train()
+        plot_training_loss(loss_recorder, save_path="./dpo_loss.png")
         self.logger.info("Done with training!")
 

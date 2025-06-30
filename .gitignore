@@ -7,3 +7,5 @@ logs/**
 core/__pycache__/**
 core/utils/__pycache__/**
 core/model/__pycache__/**
+private/**
+dataset/**
