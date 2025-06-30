@@ -1,8 +1,6 @@
 import os, requests
 from datetime import datetime, timedelta
 
-from github import Github
-
 import os, requests
 from github import Github
 from tqdm import tqdm
@@ -13,7 +11,7 @@ secret_config = load_secret("private/Secret.ini")
 
 # ⚙️ 配置
 GITHUB_TOKEN = secret_config["GITHUB"]["GITHUB_TOKEN"]  # 建议设置为环境变量
-SEARCH_EXTENSIONS = ["md", "pdf", "xlsx", "pptx", "ppt"]  # 搜索的文件扩展名列表
+SEARCH_EXTENSIONS = ["md"]  # 搜索的文件扩展名列表
 LANGS = {"md": "Markdown", "pdf": "PDF", "ppt": "PPT", "pptx": "PPT", "docx": "Word", "xlsx": "Excel"}
 DOWNLOAD_DIR = "dataset/raw_data"
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)

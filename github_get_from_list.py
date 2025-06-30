@@ -14,7 +14,7 @@ repo_config = load_json("config/repo.json")
 
 # ⚙️ 配置
 GITHUB_TOKEN = secret_config["GITHUB"]["GITHUB_TOKEN"] # 建议设置为环境变量
-REPO_NAMES = repo_config["EXCEL"]
+REPO_NAMES = repo_config["PPT"]
 TARGET_EXTENSIONS = [".pdf", ".pptx", ".docx", ".xlsx", ".md", ".ppt", ".doc"]  # 需要下载的文件扩展名列表
 LANGS = {".md": "Markdown", ".pdf": "PDF", ".ppt": "PPT", ".pptx": "PPT", ".docx": "Word", ".doc": "Word", ".xlsx": "Excel"}
 DOWNLOAD_DIR = "dataset/raw_data"
