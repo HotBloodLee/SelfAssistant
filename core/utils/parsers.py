@@ -409,13 +409,16 @@ def parse_pptx(path: str) -> Tuple[str, Dict]:
             # 图片处理
             elif shape.shape_type == 13:  # 13 表示图片类型
                 # 获取图片数据
-                image = shape.image
-                element = {
-                    "type": "image",
-                    "width": shape.width,
-                    "height": shape.height
-                }
-                slide_content.append("[图片]")
+                try:
+                    image = shape.image
+                    element = {
+                        "type": "image",
+                        "width": shape.width,
+                        "height": shape.height
+                    }
+                    slide_content.append("[图片]")
+                except Exception as e:
+                    print(f"Error processing image in slide {i + 1}: {e}")
 
             if element:
                 slide_elements.append(element)

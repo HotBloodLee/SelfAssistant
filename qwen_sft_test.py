@@ -1,4 +1,5 @@
 import copy
+import json
 import random
 from pprint import pprint
 
@@ -6,7 +7,7 @@ import torch
 from datasets import Dataset
 from transformers import TrainingArguments, Trainer, AutoTokenizer, AutoModelForCausalLM, DataCollatorForSeq2Seq
 
-from core.utils.common_utils import LossRecorderCallback, plot_training_loss
+from core.utils.common_utils import LossRecorderCallback, plot_training_loss, load_json
 
 IGNORE_INDEX = -100
 
@@ -43,108 +44,52 @@ def return_prompt_and_responses(samples):
 
     return input_encodings
 
-def create_prompt(question, context, label=None):
+def create_prompt(input_, label=None):
     dialog = [
         {
             "role": "system",
             "content": (
-                "You are given a question and references which may or may not help answer the question.  "
-                "Please answer the question in as few words as possible by using the information provided in the references that is relevant in answering the question. "
+                "You are an intelligent document parser. Given a document in plain text extracted from a file (PDF, PPT, Excel, Word, or Markdown), your task is to extract its structural content and organize it into a clean, human-readable JSON format. The output should reflect the document's internal organization (such as sections, slides, sheets, etc.) and preserve meaningful information."
+                "Please Analyze the input text and convert it into a structured JSON object that faithfully represents the content and hierarchy of the original document. The JSON should include a \"type\" field describing the document type (e.g., \"academic_pdf\", \"ppt_teaching\", \"excel_sheet\", \"markdown_doc\", \"word_handout\"), and then include extracted content fields such as \"sections\", \"chapters\", \"sheets\", etc., as appropriate."
             )
         },
     ]
     CHAT_PROMPT_TEMPLATE = (
-        "question: {question}\n"
-        "context: {context}\n"
+        "input: {input}\n"
     )
 
     dialog.append({
         "role": "user",
-        "content": CHAT_PROMPT_TEMPLATE.format(question=question, context=context),
+        "content": CHAT_PROMPT_TEMPLATE.format(input=input_),
     })
 
     if not label is None:
-        labelString = "answer: " + label
+        labelString = "output: " + label
         dialog.append({
             "role": "assistant",
             "content": labelString
         })
     return dialog
 
-data = [
-    {
-        "question": "What is the capital of France?",
-        "context": "France is a country in Europe.",
-        "answer": "Paris"
-    },
-    {
-        "question": "Who wrote '1984'?",
-        "context": "George Orwell was a British writer.",
-        "answer": "George Orwell"
-    },
-    {
-        "question": "What is the tallest mountain in the world?",
-        "context": "Mountains are natural elevations of the Earth's surface.",
-        "answer": "Mount Everest"
-    },
-    {
-        "question": "What is the boiling point of water?",
-        "context": "Water boils at a specific temperature under normal atmospheric pressure.",
-        "answer": "373.15°C"
-    },
-    {
-        "question": "What is the largest planet in our solar system?",
-        "context": "The largest planet in our solar system is Jupiter.",
-        "answer": "Jupiter"
-    },
-    {
-        "question": "What is the chemical symbol for gold?",
-        "context": "Gold is a precious metal used in jewelry and electronics.",
-        "answer": "Au"
-    },
-    {
-        "question": "What is the chemical symbol for water?",
-        "context": "Water is the chemical element with the symbol H2O.",
-        "answer": "H2O"
-    },
-    {
-        "question": "Who discovered penicillin?",
-        "context": "Penicillin is an antibiotic that revolutionized medicine.",
-        "answer": "Alexander Fleming"
-    },
-    {
-        "question": "What is the currency of Japan?",
-        "context": "Japan is an island nation in East Asia.",
-        "answer": "Yen"
-    },
-    {
-        "question": "What is the largest ocean in the world?",
-        "context": "The largest ocean in the world is the Pacific Ocean.",
-        "answer": "Pacific Ocean"
-    }
-]
+data = load_json("dataset/sft_dataset.json")
 
 model, tokenizer = load_model("model/qwen3-0.6b-base")
 
 data_list = []
 for d in data:
-    question = d["question"]
-    context = d["context"]
-    answer = d["answer"]
+    input_ = d["input"]
+    output = json.dumps(d["preview"], ensure_ascii=False)
 
-    full_prompt = create_prompt(question, context, answer)
+    full_prompt = create_prompt(input_, output)
     full_prompt = tokenizer.apply_chat_template(full_prompt, tokenize=False)
 
-    prompt = create_prompt(question, context, None)
+    prompt = create_prompt(input_, None)
     prompt = tokenizer.apply_chat_template(prompt, tokenize=False)
 
     entry = dict()
     entry["prompt"] = prompt
     entry["full_prompt"] = full_prompt
     data_list.append(entry)
-
-
-pprint(data_list)
 
 
 random.shuffle(data_list)
@@ -177,7 +122,7 @@ training_args = TrainingArguments(
     output_dir="./out",
     warmup_ratio=0.01,
     learning_rate=0.00001,
-    num_train_epochs=20,
+    num_train_epochs=1,
     per_device_train_batch_size=1,
     per_device_eval_batch_size=1,
     remove_unused_columns=False,  # prevents from indexing errors
